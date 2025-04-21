@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sesame Carpooling - Passenger</title>
+    <script src="https://maps.googleapis.com/maps/api/js?libraries=places&callback=initMap" async defer></script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #0A192F;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            display: flex;
+            width: 90%;
+            max-width: 1200px;
+            margin-top: 20px;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .sidebar {
+            width: 30%;
+            background: #112D4E;
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        .map-container {
+            flex-grow: 1;
+            height: 500px;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 3px solid #3F72AF;
+        }
+        h1 {
+            color: #F9D923;
+            text-align: center;
+        }
+        input, button, select {
+            width: 95%;
+            padding: 18px;
+            margin: 12px 0;
+            font-size: 18px;
+            border-radius: 8px;
+            border: none;
+            background-color: #DBE2EF;
+            color: #112D4E;
+            outline: none;
+        }
+        button {
+            background-color: #3F72AF;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button:hover {
+            background-color: #1B4965;
+        }
+        .ride-list ul {
+            list-style: none;
+            padding: 0;
+        }
+        .ride-list li {
+            background: #3F72AF;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 6px 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .ride-info {
+            margin-bottom: 10px;
+        }
+        .ride-actions {
+            display: flex;
+            justify-content: space-between;
+        }
+        .request-btn {
+            background-color: #28a745;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            border: none;
+            width: auto;
+        }
+        .request-btn:hover {
+            background-color: #218838;
+        }
+        .details-btn {
+            background-color: #17a2b8;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            border: none;
+            width: auto;
+        }
+        .details-btn:hover {
+            background-color: #138496;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 90%;
+            max-width: 1200px;
+            margin-top: 20px;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .logout-btn {
+            background-color: #dc3545;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            border: none;
+            width: auto;
+        }
+        .logout-btn:hover {
+            background-color: #c82333;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 15px;
+        }
+        .tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            background-color: #1B4965;
+            color: white;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background-color: #3F72AF;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .status-pending {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        .status-accepted {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .status-rejected {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .status-cancelled {
+            color: #6c757d;
+            font-weight: bold;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.7);
+        }
+        .modal-content {
+            background-color: #112D4E;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 15px;
+            width: 80%;
+            max-width: 500px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: white;
+        }
+        .driver-info {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+        }
+        .driver-pic {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #3F72AF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 24px;
+            color: white;
+        }
+        .driver-details h3 {
+            margin: 0;
+            color: #F9D923;
+        }
+        .driver-details p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Sesame Carpooling</h1>
+        <div class="user-info">
+            <span id="user-name">Welcome, User</span>
+            <button class="logout-btn" id="logout-btn">Logout</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="sidebar">
+            <div class="tabs">
+                <div class="tab active" data-tab="search">Search Rides</div>
+                <div class="tab" data-tab="my-rides">My Rides</div>
+            </div>
+            
+            <div class="tab-content active" id="search-tab">
+                <h2>Find a Ride</h2>
+                <input type="text" id="pickup" placeholder="Enter pickup location">
+                <input type="text" id="destination" placeholder="Enter destination">
+                <input type="date" id="departure-time" placeholder="Departure date">
+                <button id="search-btn">Search Rides</button>
+                
+                <h2>Available Rides</h2>
+                <div class="ride-list">
+                    <ul id="available-rides"></ul>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="my-rides-tab">
+                <h2>My Ride Requests</h2>
+                <div class="ride-list">
+                    <ul id="my-rides"></ul>
+                </div>
+            </div>
+        </div>
+        
+        <div id="map" class="map-container"></div>
+    </div>
+    
+    <!-- Ride Details Modal -->
+    <div id="ride-details-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Ride Details</h2>
+            <div id="ride-details-content"></div>
+            <div class="driver-info">
+                <div class="driver-pic" id="driver-initials"></div>
+                <div class="driver-details">
+                    <h3 id="driver-name"></h3>
+                    <p id="driver-contact"></p>
+                </div>
+            </div>
+            <div id="ride-actions"></div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const userNameElement = document.getElementById('user-name');
+        const logoutBtn = document.getElementById('logout-btn');
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const pickupInput = document.getElementById('pickup');
+        const destinationInput = document.getElementById('destination');
+        const departureTimeInput = document.getElementById('departure-time');
+        const searchBtn = document.getElementById('search-btn');
+        const availableRidesList = document.getElementById('available-rides');
+        const myRidesList = document.getElementById('my-rides');
+        const modal = document.getElementById('ride-details-modal');
+        const closeModalBtn = document.querySelector('.close');
+        const rideDetailsContent = document.getElementById('ride-details-content');
+        const driverInitials = document.getElementById('driver-initials');
+        const driverName = document.getElementById('driver-name');
+        const driverContact = document.getElementById('driver-contact');
+        const rideActions = document.getElementById('ride-actions');
+        
+        // API URL - Change this to your actual backend URL when deploying
+        const API_URL = 'http://localhost:5000/api';
+        
+        // Map and Places variables
+        let map;
+        let directionsService;
+        let directionsRenderer;
+        let pickupAutocomplete;
+        let destinationAutocomplete;
+        let markers = [];
+        
+        // Authentication check and user data
+        const checkAuth = () => {
+            const token = localStorage.getItem('token');
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            
+            if (!token || !user.id) {
+                window.location.href = 'login.html';
+                return false;
+            }
+            
+            userNameElement.textContent = `Welcome, ${user.name}`;
+            return true;
+        };
+        
+        // Initialize Google Maps
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 31.7683, lng: 35.2137 }, // Default to Jerusalem
+                zoom: 10
+            });
+            
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer({
+                map: map,
+                suppressMarkers: true
+            });
+            
+            // Initialize Places Autocomplete
+            pickupAutocomplete = new google.maps.places.Autocomplete(pickupInput);
+            destinationAutocomplete = new google.maps.places.Autocomplete(destinationInput);
+            
+            pickupAutocomplete.addListener('place_changed', () => {
+                const place = pickupAutocomplete.getPlace();
+                if (!place.geometry) {
+                    return;
+                }
+                
+                map.setCenter(place.geometry.location);
+                map.setZoom(13);
+            });
+            
+            destinationAutocomplete.addListener('place_changed', () => {
+                const place = destinationAutocomplete.getPlace();
+                if (!place.geometry) {
+                    return;
+                }
+            });
+        }
+        
+        // Format date and time
+        function formatDateTime(isoString) {
+            const date = new Date(isoString);
+            return `${date.toLocaleDateString()} at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        }
+        
+        // Clear all markers from the map
+        function clearMarkers() {
+            for (let marker of markers) {
+                marker.setMap(null);
+            }
+            markers = [];
+        }
+        
+        // Display route on map
+        function displayRoute(pickupLat, pickupLng, destLat, destLng) {
+            clearMarkers();
+            
+            const pickupLocation = new google.maps.LatLng(pickupLat, pickupLng);
+            const destination = new google.maps.LatLng(destLat, destLng);
+            
+            // Add markers
+            const pickupMarker = new google.maps.Marker({
+                position: pickupLocation,
+                map: map,
+                title: 'Pickup',
+                icon: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png'
+            });
+            
+            const destMarker = new google.maps.Marker({
+                position: destination,
+                map: map,
+                title: 'Destination',
+                icon: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
+            });
+            
+            markers.push(pickupMarker, destMarker);
+            
+            // Calculate and display route
+            directionsService.route({
+                origin: pickupLocation,
+                destination: destination,
+                travelMode: google.maps.TravelMode.DRIVING
+            }, (response, status) => {
+                if (status === 'OK') {
+                    directionsRenderer.setDirections(response);
+                    
+                    // Fit map to route bounds
+                    const bounds = new google.maps.LatLngBounds();
+                    bounds.extend(pickupLocation);
+                    bounds.extend(destination);
+                    map.fitBounds(bounds);
+                }
+            });
+        }
+        
+        // Get all available rides
+        async function fetchAvailableRides() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/rides`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const rides = await response.json();
+                    displayAvailableRides(rides);
+                } else {
+                    console.error('Failed to fetch rides');
+                }
+            } catch (error) {
+                console.error('Error fetching rides:', error);
+            }
+        }
+        
+        // Get user's ride requests
+        async function fetchMyRides() {
+            try {
+                const token = localStorage.getItem('token');
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+                const response = await fetch(`http://localhost/carpooling/fetch_my_rides.php?user_id=${user.id}&is_driver=0`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    displayMyRides(result.rides);
+                } else {
+                    myRidesList.innerHTML = '<p>No accepted rides found.</p>';
+                }
+            } catch (error) {
+                console.error('Error fetching user rides:', error);
+                myRidesList.innerHTML = '<p>An error occurred while fetching your rides.</p>';
+            }
+        }
+        
+        // Display available rides in the list
+        function displayAvailableRides(rides) {
+            availableRidesList.innerHTML = '';
+            
+            if (rides.length === 0) {
+                availableRidesList.innerHTML = '<p>No rides available matching your criteria.</p>';
+                return;
+            }
+            
+            rides.forEach(ride => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div class="ride-info">
+                        <strong>From:</strong> ${ride.pickup_location}<br>
+                        <strong>To:</strong> ${ride.destination}<br>
+                        <strong>When:</strong> ${formatDateTime(ride.departure_time)}<br>
+                        <strong>Price:</strong> $${ride.price}<br>
+                        <strong>Available Seats:</strong> ${ride.available_seats}
+                    </div>
+                    <div class="ride-actions">
+                        <button class="details-btn" data-ride-id="${ride.id}">View Details</button>
+                        <button class="request-btn" data-ride-id="${ride.id}">Request Ride</button>
+                    </div>
+                `;
+                availableRidesList.appendChild(li);
+                
+                // Add event listeners to the buttons
+                const detailsBtn = li.querySelector('.details-btn');
+                const requestBtn = li.querySelector('.request-btn');
+                
+                detailsBtn.addEventListener('click', () => showRideDetails(ride.id));
+                requestBtn.addEventListener('click', () => requestRide(ride.id));
+            });
+        }
+        
+        // Display user's rides in the list
+        function displayMyRides(rides) {
+            myRidesList.innerHTML = '';
+
+            if (rides.length === 0) {
+                myRidesList.innerHTML = '<p>You have no accepted rides yet.</p>';
+                return;
+            }
+
+            rides.forEach(ride => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div class="ride-info">
+                        <strong>From:</strong> ${ride.pickup_location}<br>
+                        <strong>To:</strong> ${ride.destination}<br>
+                        <strong>When:</strong> ${formatDateTime(ride.departure_time)}<br>
+                        <strong>Price:</strong> $${ride.price}<br>
+                        <strong>Available Seats:</strong> ${ride.available_seats}
+                    </div>
+                `;
+                myRidesList.appendChild(li);
+            });
+        }
+        
+        // Show ride details in modal
+        async function showRideDetails(rideId) {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/rides/${rideId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const ride = await response.json();
+                    
+                    // Display route on map
+                    displayRoute(
+                        ride.pickup_coordinates.lat,
+                        ride.pickup_coordinates.lng,
+                        ride.destination_coordinates.lat,
+                        ride.destination_coordinates.lng
+                    );
+                    
+                    // Populate modal content
+                    rideDetailsContent.innerHTML = `
+                        <p><strong>From:</strong> ${ride.pickup_location}</p>
+                        <p><strong>To:</strong> ${ride.destination}</p>
+                        <p><strong>Departure:</strong> ${formatDateTime(ride.departure_time)}</p>
+                        <p><strong>Available Seats:</strong> ${ride.available_seats}</p>
+                        <p><strong>Price:</strong> $${ride.price}</p>
+                    `;
+                    
+                    // Populate driver info
+                    const driverInitialsText = ride.driver.name.split(' ').map(name => name[0]).join('');
+                    driverInitials.textContent = driverInitialsText;
+                    driverName.textContent = ride.driver.name;
+                    driverContact.textContent = `Phone: ${ride.driver.phone || 'Not provided'}`;
+                    
+                    // Check if user has already requested this ride
+                    const userId = JSON.parse(localStorage.getItem('user')).id;
+                    const userRequest = ride.requests.find(req => req.passenger.id === userId);
+                    
+                    // Add appropriate action button
+                    if (userRequest) {
+                        rideActions.innerHTML = `
+                            <p>Your request status: <span class="status-${userRequest.status}">${userRequest.status.charAt(0).toUpperCase() + userRequest.status.slice(1)}</span></p>
+                            ${userRequest.status === 'pending' ? `<button id="cancel-request-btn" style="background-color: #dc3545;">Cancel Request</button>` : ''}
+                        `;
+                        
+                        if (userRequest.status === 'pending') {
+                            document.getElementById('cancel-request-btn').addEventListener('click', () => {
+                                cancelRequest(userRequest.id);
+                                modal.style.display = 'none';
+                            });
+                        }
+                    } else {
+                        rideActions.innerHTML = `<button id="request-ride-btn" style="background-color: #28a745;">Request This Ride</button>`;
+                        document.getElementById('request-ride-btn').addEventListener('click', () => {
+                            requestRide(ride.id);
+                            modal.style.display = 'none';
+                        });
+                    }
+                    
+                    // Display modal
+                    modal.style.display = 'block';
+                } else {
+                    console.error('Failed to fetch ride details');
+                }
+            } catch (error) {
+                console.error('Error fetching ride details:', error);
+            }
+        }
+        
+        // Request a ride
+        async function requestRide(rideId) {
+            try {
+                const token = localStorage.getItem('token');
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+                const response = await fetch('http://localhost/carpooling/request_ride.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        ride_id: rideId,
+                        passenger_id: user.id
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(result.message || 'Ride request sent successfully!');
+                } else {
+                    alert(result.message || 'Failed to request ride.');
+                }
+            } catch (error) {
+                console.error('Error requesting ride:', error);
+                alert('An error occurred. Please try again.');
+            }
+        }
+        
+        // Cancel a ride request
+        async function cancelRequest(requestId) {
+            // This endpoint is not implemented in the backend yet
+            alert('Cancellation feature is not implemented yet');
+            // In a real implementation, you would make a DELETE request to an endpoint like:
+            // await fetch(`${API_URL}/rides/requests/${requestId}`, {
+            //     method: 'DELETE',
+            //     headers: {
+            //         'Authorization': `Bearer ${token}`
+            //     }
+            // });
+        }
+        
+        // Search for rides based on criteria
+        async function searchRides() {
+            const pickup = pickupInput.value.trim();
+            const destination = destinationInput.value.trim();
+            const departureDate = departureTimeInput.value;
+
+            try {
+                const response = await fetch(`http://localhost/carpooling/search_offers.php?pickup=${encodeURIComponent(pickup)}&destination=${encodeURIComponent(destination)}&date=${encodeURIComponent(departureDate)}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    displayAvailableRides(result.offers);
+                } else {
+                    availableRidesList.innerHTML = '<p>No rides found matching your criteria.</p>';
+                }
+            } catch (error) {
+                console.error('Error searching rides:', error);
+                availableRidesList.innerHTML = '<p>An error occurred while searching for rides.</p>';
+            }
+        }
+        
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!checkAuth()) return;
+            
+            // Initialize Google Maps after authentication check
+            if (typeof google !== 'undefined') {
+                initMap();
+            } else {
+                // If Google Maps API is not loaded yet, wait for it
+                window.initMap = initMap;
+            }
+            
+            // Fetch initial data
+            fetchAvailableRides();
+            fetchMyRides();
+            
+            // Tab switching
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.dataset.tab;
+                    
+                    // Update active tab
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    // Show corresponding content
+                    tabContents.forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    document.getElementById(`${tabId}-tab`).classList.add('active');
+                });
+            });
+            
+            // Search button
+            searchBtn.addEventListener('click', searchRides);
+            
+            // Modal close button
+            closeModalBtn.addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+            
+            // Close modal when clicking outside
+            window.addEventListener('click', (event) => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+            
+            // Logout button
+            logoutBtn.addEventListener('click', () => {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = 'login.html';
+            });
+        });
+    </script>
+</body>
+</html>
